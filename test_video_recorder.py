@@ -64,6 +64,17 @@ class TestVideoRecorder(unittest.TestCase):
         finally:
             signal.alarm(0)
             
+    def test_rtsp_support(self):
+        signal.signal(signal.SIGALRM, self.signal_handler)
+        signal.alarm(self.timeout_seconds)
+        
+        try:
+            from video_recorder import VideoRecorderApp
+            self.assertTrue(hasattr(VideoRecorderApp, 'connect_rtsp'), "应该有connect_rtsp方法")
+            self.assertTrue(hasattr(VideoRecorderApp, 'disconnect_rtsp'), "应该有disconnect_rtsp方法")
+        finally:
+            signal.alarm(0)
+            
     def test_dst_directory_creation(self):
         dst_dir = Path(__file__).parent / "dst"
         self.assertTrue(dst_dir.exists(), "dst目录应该存在")
