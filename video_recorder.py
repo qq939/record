@@ -1,11 +1,12 @@
 import sys
 import os
+import time
 from pathlib import Path
 
 dst_dir = Path(__file__).parent / "dst"
 dst_dir.mkdir(exist_ok=True)
 
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QComboBox
 from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QImage, QPixmap
 import cv2
@@ -18,8 +19,10 @@ class VideoRecorderApp(QWidget):
         self.is_recording = False
         self.video_writer = None
         self.output_dir = Path(__file__).parent / "dst"
+        self.current_camera = 0
+        self.cap = None
         self.init_ui()
-        self.init_camera()
+        self.detect_cameras()
         
     def init_ui(self):
         self.setWindowTitle("视频录制面板")
@@ -27,6 +30,16 @@ class VideoRecorderApp(QWidget):
         
         central_widget = QWidget()
         main_layout = QVBoxLayout(central_widget)
+        
+        camera_layout = QHBoxLayout()
+        camera_layout.addWidget(QLabel("选择相机:"))
+        
+        self.camera_combo = QComboBox()
+        self.camera_combo.currentIndexChanged.connect(self.on_camera_changed)
+        camera_layout.addWidget(self.camera_combo)
+        camera_layout.addStretch()
+        
+        main_layout.addLayout(camera_layout)
         
         self.video_label = QLabel()
         self.video_label.setAlignment(Qt.AlignCenter)
@@ -51,10 +64,41 @@ class VideoRecorderApp(QWidget):
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)
         
-    def init_camera(self):
-        self.cap = cv2.VideoCapture(0)
+    def detect_cameras(self):
+        self.camera_combo.clear()
+        available_cameras = []
+        
+        for i in range(5):
+            test_cap = cv2.VideoCapture(i)
+            if test_cap.isOpened():
+                available_cameras.append(i)
+                test_cap.release()
+                
+        for cam_idx in available_cameras:
+            self.camera_combo.addItem(f"相机 {cam_idx}", cam_idx)
+            
+        if not available_cameras:
+            self.status_label.setText("警告: 未检测到摄像头")
+        else:
+            self.init_camera(available_cameras[0])
+            
+    def init_camera(self, camera_index):
+        if self.cap is not None:
+            self.cap.release()
+            
+        self.current_camera = camera_index
+        self.cap = cv2.VideoCapture(camera_index)
+        
         if not self.cap.isOpened():
-            self.status_label.setText("警告: 无法打开摄像头")
+            self.status_label.setText(f"错误: 无法打开相机 {camera_index}")
+            
+    def on_camera_changed(self, index):
+        if self.is_recording:
+            self.stop_recording()
+            
+        camera_index = self.camera_combo.itemData(index)
+        if camera_index is not None:
+            self.init_camera(camera_index)
             
     def toggle_recording(self):
         if not self.is_recording:
@@ -63,7 +107,7 @@ class VideoRecorderApp(QWidget):
             self.stop_recording()
             
     def start_recording(self):
-        if not self.cap.isOpened():
+        if self.cap is None or not self.cap.isOpened():
             self.status_label.setText("错误: 摄像头未打开")
             return
             
@@ -96,6 +140,9 @@ class VideoRecorderApp(QWidget):
         self.status_label.setText("状态: 录制已保存")
         
     def update_frame(self):
+        if self.cap is None:
+            return
+            
         ret, frame = self.cap.read()
         if ret:
             if self.is_recording and self.video_writer is not None:
@@ -124,7 +171,6 @@ class VideoRecorderApp(QWidget):
 
 
 if __name__ == "__main__":
-    import time
     app = QApplication(sys.argv)
     window = VideoRecorderApp()
     window.show()

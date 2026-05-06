@@ -52,6 +52,18 @@ class TestVideoRecorder(unittest.TestCase):
         finally:
             signal.alarm(0)
             
+    def test_camera_selection_support(self):
+        signal.signal(signal.SIGALRM, self.signal_handler)
+        signal.alarm(self.timeout_seconds)
+        
+        try:
+            from video_recorder import VideoRecorderApp
+            self.assertTrue(hasattr(VideoRecorderApp, 'detect_cameras'), "应该有detect_cameras方法")
+            self.assertTrue(hasattr(VideoRecorderApp, 'init_camera'), "应该有init_camera方法")
+            self.assertTrue(hasattr(VideoRecorderApp, 'on_camera_changed'), "应该有on_camera_changed方法")
+        finally:
+            signal.alarm(0)
+            
     def test_dst_directory_creation(self):
         dst_dir = Path(__file__).parent / "dst"
         self.assertTrue(dst_dir.exists(), "dst目录应该存在")
