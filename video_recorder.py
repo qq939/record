@@ -68,11 +68,12 @@ class VideoRecorderApp(QWidget):
         self.camera_combo.clear()
         available_cameras = []
         
-        for i in range(5):
+        for i in range(10):
             test_cap = cv2.VideoCapture(i)
             if test_cap.isOpened():
                 available_cameras.append(i)
                 test_cap.release()
+            time.sleep(0.1)
                 
         for cam_idx in available_cameras:
             self.camera_combo.addItem(f"相机 {cam_idx}", cam_idx)
@@ -88,6 +89,7 @@ class VideoRecorderApp(QWidget):
             
         self.current_camera = camera_index
         self.cap = cv2.VideoCapture(camera_index)
+        time.sleep(0.5)
         
         if not self.cap.isOpened():
             self.status_label.setText(f"错误: 无法打开相机 {camera_index}")
